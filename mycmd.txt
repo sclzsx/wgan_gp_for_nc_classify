@@ -1,0 +1,1 @@
+python train.py data -a lsun --dataset lsun --image-size 64 --classes church_outdoor --start-iter 10000 --netG weights/lsun_G_iter_10000.pth --netD weights/lsun_D_iter_10000.pth
