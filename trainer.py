@@ -66,7 +66,7 @@ class Trainer(object):
                                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                                                 ]))
         elif args.dataset == 'uc':
-            dataset = UCDataset('../UCMerced_LandUse/train64', train_aug=1)
+            dataset = UCDataset('../UCMerced_LandUse/train64', train_aug=0, choose_classes=args.classes)
         else:
             classes = [c + "_train" for c in args.classes.split(",")]
             dataset = torchvision.datasets.LSUN(root=args.data, classes=classes,
@@ -194,16 +194,16 @@ class Trainer(object):
                 # The image is saved every 1000 epoch.
                 if iters % 1000 == 0:
                     vutils.save_image(real_images,
-                                      os.path.join("output", "real_samples.png"),
+                                      os.path.join("output_" + args.classes, "real_samples.png"),
                                       normalize=True)
                     fake = self.generator(fixed_noise)
                     vutils.save_image(fake.detach(),
-                                      os.path.join("output", f"fake_samples_{iters}.png"),
+                                      os.path.join("output_" + args.classes, f"fake_samples_{iters}.png"),
                                       normalize=True)
 
                     # do checkpointing
-                    torch.save(self.generator.state_dict(), f"weights/{args.arch}_G_iter_{iters}.pth")
-                    torch.save(self.discriminator.state_dict(), f"weights/{args.arch}_D_iter_{iters}.pth")
+                    torch.save(self.generator.state_dict(), "weights_" + args.classes + "/{args.arch}_G_iter_{iters}.pth")
+                    torch.save(self.discriminator.state_dict(), "weights_" + args.classes + "/{args.arch}_D_iter_{iters}.pth")
 
                 if iters == int(args.iters):  # If the iteration is reached, exit.
                     break

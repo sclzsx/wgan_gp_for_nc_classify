@@ -54,7 +54,7 @@ if __name__ == "__main__":
                         help="Number of training steps for discriminator per iter. (Default: 5).")
     parser.add_argument("--image-size", type=int, default=64,
                         help="The height / width of the input image to network. (default: 64).")
-    parser.add_argument("--classes", default="church_outdoor",
+    parser.add_argument("--classes", default="tenniscourt",
                         help="comma separated list of classes for the lsun data set. (default: ``church_outdoor``).")
     parser.add_argument("--pretrained", dest="pretrained", action="store_true",
                         help="Use pre-trained model.")
@@ -72,8 +72,8 @@ if __name__ == "__main__":
     print("Run Training Engine.\n")
     print(args)
 
-    create_folder("output")
-    create_folder("weights")
+    create_folder("output_" + args.classes)
+    create_folder("weights_" + args.classes)
 
     logger.info("TrainingEngine:")
     print("\tAPI version .......... 0.1.0")

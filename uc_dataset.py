@@ -48,8 +48,15 @@ def split_ucdataset_for_wgangp_and_classify(dataset_dir, class_names=None, train
 
 
 class UCDataset(Dataset):
-    def __init__(self, image_dir, train_aug=0):
-        self.paths = [i for i in Path(image_dir).rglob('*.*')]
+    def __init__(self, image_dir, train_aug=0, choose_classes=None):
+        if len(choose_classes) > 0:
+            self.paths = [i for i in Path(image_dir).rglob('*.*')]
+        else:
+            self.paths = []
+            for i in Path(image_dir).rglob('*.*'):
+                if i.name[:-6] in choose_classes:
+                    self.paths.append(i)
+
         if train_aug != 0:
             self.transform = transforms.Compose([
                 transforms.RandomVerticalFlip(),
