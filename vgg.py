@@ -26,7 +26,8 @@ class VGG(nn.Module):
         super(VGG, self).__init__()
         self.features = features
         self.classifier = nn.Sequential(
-            nn.Linear(2048, 4096),
+            nn.Linear(32768*4, 4096),
+            # nn.Linear(2048, 4096),
             nn.ReLU(True),
             nn.Dropout(),
             nn.Linear(4096, 4096),
@@ -192,6 +193,6 @@ if __name__ == '__main__':
         num_classes = 21
         net = vgg16().cuda()
         print(net)
-        x = torch.randn(64, 3, 64, 64).cuda()
+        x = torch.randn(4, 3, 256, 256).cuda()
         y = net(x)
         print('y', y.shape)

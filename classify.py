@@ -12,12 +12,11 @@ from vgg import vgg16
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, confusion_matrix
 from collections import Counter
 
-from uc_dataset import UCDataset
-
+from uc_dataset import UCDataset, class_names, class_ids, class_name2id, class_id2name
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # 自动选择用cpu还是gpu
 
-batch_size = 64
+batch_size = 1
 max_epoch = 50
 
 trainset_id = 1
@@ -32,23 +31,23 @@ else:
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
 
+train_dataset = UCDataset('../UCMerced_LandUse/train', image_size=256)
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+optimizer = optim.Adam(model.parameters(), lr=1e-3)
+criterion = nn.CrossEntropyLoss().to(device)
+
+test_dataset = UCDataset('../UCMerced_LandUse/test', image_size=256)
+test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
 def train():
-    train_dataset = UCDataset('../UCMerced_LandUse/train64', image_size=64)
-
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-
-    print('Finish loading dataset, begin training.')
-
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
-
-    criterion = nn.CrossEntropyLoss().to(device)
-
+    max_f1 = -1
+    iter_per_epoch = len(train_dataloader)
+    print_iter_freq = 0.25
+    print_iter = int(iter_per_epoch) * print_iter_freq
     for epoch in range(1, max_epoch + 1):  # range的区间是左闭右开,所以加1
-
         model.train()  # 训练模式
-
         mean_loss = 0
-
         for i, (batch_data, batch_labels) in enumerate(train_dataloader):  # 遍历train_dataloader,每次返回一个批次,i记录批次id
             # print(batch_data.shape, batch_labels.shape)
             batch_data = batch_data.to(device)  # 若环境可用gpu,自动将tensor转为cuda格式
@@ -57,26 +56,39 @@ def train():
             optimizer.zero_grad()  # 清零已有梯度
 
             batch_pred = model(batch_data)  # 前向传播,获得网络的输出
-
             batch_loss = criterion(batch_pred, batch_labels)
-
             batch_loss_val = batch_loss.item()
 
-            if i % 50 == 0:
-                print(epoch, i, batch_loss_val)
+            if i % print_iter == 0:
+                print('[{}/{}] batch loss:{}'.format(i, iter_per_epoch, batch_loss_val))
 
             mean_loss = mean_loss + batch_loss_val  # 累加所有批次的平均损失. item()的意思是取数值,因为该变量不是一个tensor
 
             batch_loss.backward()  # 反向传播损失,更新模型参数
-
             optimizer.step()  # 更新学习率
 
         mean_loss = mean_loss / (i + 1)  # 损失和求均,为当前epoch的损失
 
-        log = {'epoch': epoch, 'mean loss': mean_loss}
-        print('######', log)
+        with torch.no_grad():
+            all_labels = []
+            all_preds = []
+            for i, (batch_data, batch_labels) in enumerate(test_dataloader):  # 遍历train_dataloader,每次返回一个批次,i记录批次id
+                batch_data = batch_data.to(device)  # 若环境可用gpu,自动将tensor转为cuda格式
+                batch_pred = model(batch_data)  # 前向传播,获得网络的输出
 
-        torch.save(model.state_dict(), save_dir + 'latest.pth')
+                preds = batch_pred.squeeze().cpu().numpy().argmax(axis=1)  # 依次进行: 降维,转为cpu张量,转为np,求每一行最大值的索引
+                labels = batch_labels.squeeze().cpu().numpy()
+
+                all_labels.extend(list(labels))
+                all_preds.extend(list(preds))
+
+        f1 = f1_score(all_labels, all_preds, average='weighted')
+        if f1 > max_f1:
+            max_f1 = f1
+            torch.save(model.state_dict(), save_dir + 'best.pth')
+            print('Epoch:{}, train loss:{}, saved best model f1:{}'.format(epoch, mean_loss, f1))
+        else:
+            print('Epoch:{}, train loss:{}'.format(epoch, mean_loss))
 
 
 def visualize_tensor_in_out(input, output, save_path):
@@ -97,11 +109,11 @@ def plot_confusion_matrix(confusion, save_path):
     plt.imshow(confusion, cmap=plt.cm.Blues)
     # ticks 坐标轴的坐标点
     # label 坐标轴标签说明
-    indices = range(len(extract_labels))
+    indices = range(len(class_names))
     # 第一个是迭代对象，表示坐标的显示顺序，第二个参数是坐标轴显示列表
     # axis = [str(i) for i in range(num_classes)]
-    plt.xticks(indices, extract_labels)
-    plt.yticks(indices, extract_labels)
+    plt.xticks(indices, class_names)
+    plt.yticks(indices, class_names)
 
     plt.colorbar()
 
@@ -124,24 +136,22 @@ def plot_confusion_matrix(confusion, save_path):
 
 
 def eval():
-    test_dataset = UCDataset('../UCMerced_LandUse/test64', image_size=64)
-
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-    print('Finish loading dataset, begin testing.')
-
-    model_path = save_dir + 'latest.pth'
+    model_path = save_dir + 'best.pth'
     model.load_state_dict(torch.load(model_path))
 
-    all_labels = []
-    all_preds = []
-    for i, (batch_data, batch_labels) in enumerate(test_dataloader):  # 遍历train_dataloader,每次返回一个批次,i记录批次id
-        with torch.no_grad():
+    with torch.no_grad():
+        all_labels = []
+        all_preds = []
+        for i, (batch_data, batch_labels) in enumerate(test_dataloader):  # 遍历train_dataloader,每次返回一个批次,i记录批次id
             batch_data = batch_data.to(device)  # 若环境可用gpu,自动将tensor转为cuda格式
             batch_pred = model(batch_data)  # 前向传播,获得网络的输出
 
             preds = batch_pred.squeeze().cpu().numpy().argmax(axis=1)  # 依次进行: 降维,转为cpu张量,转为np,求每一行最大值的索引
             labels = batch_labels.squeeze().cpu().numpy()
+
+            print('preds', preds)
+            print('label', labels)
+            print()
 
             all_labels.extend(list(labels))
             all_preds.extend(list(preds))
@@ -164,7 +174,7 @@ def demo():
 
     print('Finish loading dataset, begin testing.')
 
-    model_path = save_dir + 'latest.pth'
+    model_path = save_dir + 'best.pth'
     model.load_state_dict(torch.load(model_path))
 
     for i, (batch_data, batch_labels) in enumerate(test_dataloader):  # 遍历train_dataloader,每次返回一个批次,i记录批次id
@@ -183,13 +193,12 @@ def demo():
                 flag = False
                 color = 'red'
 
-            text = 'Label is :{}, Prediction is :{}, Recognized :{}'.format(label_dict_decode[lab],
-                                                                            label_dict_decode[pre], flag)
+            text = 'Label is:{}, Prediction is:{}, Recognized:{}'.format(class_id2name[lab], class_id2name[pre], flag)
             print(text)
 
-            plt.title(text)
-            plt.plot(np.arange(256), batch_data.squeeze().cpu().numpy(), color=color)
-            plt.show()
+            # plt.title(text)
+            # plt.plot(np.arange(256), batch_data.squeeze().cpu().numpy(), color=color)
+            # plt.show()
 
 
 if __name__ == '__main__':
