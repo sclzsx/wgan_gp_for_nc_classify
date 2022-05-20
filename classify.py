@@ -105,7 +105,7 @@ def train(epoch):
 
 
 # 5. Test Network
-def test(epoch):
+def do_test(epoch):
     global best_acc
     net.eval()
 
@@ -143,4 +143,4 @@ def test(epoch):
 
 for epoch in range(start_epoch, start_epoch + 200):
     train(epoch)
-    test(epoch)
+    do_test(epoch)

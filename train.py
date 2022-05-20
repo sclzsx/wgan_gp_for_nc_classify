@@ -44,7 +44,7 @@ if __name__ == "__main__":
                         help="manual iter number (useful on restarts)")
     parser.add_argument("--iters", default=100000, type=int, metavar="N",
                         help="The number of iterations is needed in the training of model. (default: 100000)")
-    parser.add_argument("-b", "--batch-size", default=64, type=int, metavar="N",
+    parser.add_argument("-b", "--batch-size", default=128, type=int, metavar="N",
                         help="mini-batch size (default: 64), this is the total "
                              "batch size of all GPUs on the current node when "
                              "using Data Parallel or Distributed Data Parallel.")
