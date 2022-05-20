@@ -38,7 +38,7 @@ if __name__ == "__main__":
                         help="model architecture: " +
                              " | ".join(model_names) +
                              " (default: lsun)")
-    parser.add_argument("-j", "--workers", default=8, type=int, metavar="N",
+    parser.add_argument("-j", "--workers", default=0, type=int, metavar="N",
                         help="Number of data loading workers. (default:8)")
     parser.add_argument("--start-iter", default=0, type=int, metavar="N",
                         help="manual iter number (useful on restarts)")
@@ -52,7 +52,7 @@ if __name__ == "__main__":
                         help="Learning rate. (default:0.0002)")
     parser.add_argument("--n_critic", type=int, default=5,
                         help="Number of training steps for discriminator per iter. (Default: 5).")
-    parser.add_argument("--image-size", type=int, default=256,
+    parser.add_argument("--image-size", type=int, default=64,
                         help="The height / width of the input image to network. (default: 64).")
     parser.add_argument("--classes", default="church_outdoor",
                         help="comma separated list of classes for the lsun data set. (default: ``church_outdoor``).")

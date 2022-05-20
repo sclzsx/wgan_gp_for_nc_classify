@@ -66,7 +66,7 @@ class Trainer(object):
                                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                                                 ]))
         elif args.dataset == 'uc':
-            dataset = UCDataset('../UCMerced_LandUse/train', image_size=args.image_size)
+            dataset = UCDataset('../UCMerced_LandUse/train64', train_aug=1)
         else:
             classes = [c + "_train" for c in args.classes.split(",")]
             dataset = torchvision.datasets.LSUN(root=args.data, classes=classes,
